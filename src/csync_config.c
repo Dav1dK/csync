@@ -163,7 +163,7 @@ static int csync_config_get_int(char **str, int notfound) {
 
     p = csync_config_get_token(str);
     if (p && *p) {
-        i = strtol(p, &endp, 10);
+        i = strtol(*str, &endp, 10);
         if (p == endp) {
             return notfound;
         }
