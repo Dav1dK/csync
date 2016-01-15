@@ -95,7 +95,7 @@ static int _csync_config_copy_default (const char *config) {
 # ifdef WITH_UNIT_TESTING
     rc = c_copy(BINARYDIR "/config/" CSYNC_CONF_FILE, config, 0644);
 # else
-    rc = 0;
+    rc = -1;
 # endif
 
     if (rc < 0) {
