@@ -39,6 +39,7 @@
 
 #define CSYNC_LOG_CATEGORY_NAME "csync.propagator"
 #include "csync_log.h"
+#include "c_strerror.h"
 #include "csync_util.h"
 
 static int _csync_cleanup_cmp(const void *a, const void *b) {
@@ -153,7 +154,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
       rc = 1;
     }
 
-    strerror_r(errno, errbuf, sizeof(errbuf));
+    c_strerror_r(errno, errbuf, sizeof(errbuf));
     CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
         "file: %s, command: open(O_RDONLY), error: %s",
         suri, errbuf );
@@ -221,7 +222,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
         if (csync_vio_mkdirs(ctx, tdir, C_DIR_MODE) < 0) {
           ctx->status_code = csync_errno_to_status(errno,
                                                    CSYNC_STATUS_PROPAGATE_ERROR);
-          strerror_r(errno, errbuf, sizeof(errbuf));
+          c_strerror_r(errno, errbuf, sizeof(errbuf));
           CSYNC_LOG(CSYNC_LOG_PRIORITY_WARN,
               "dir: %s, command: mkdirs, error: %s",
               tdir, errbuf);
@@ -229,14 +230,14 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
         break;
       case ENOMEM:
         rc = -1;
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
             "file: %s, command: open(O_CREAT), error: %s",
             turi, errbuf);
         goto out;
         break;
       default:
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
             "file: %s, command: open(O_CREAT), error: %s",
             turi, errbuf);
@@ -255,7 +256,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
       if (rc < 0) {
         ctx->status_code = csync_errno_to_status(errno,
                                                  CSYNC_STATUS_PROPAGATE_ERROR);
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
                   "file: %s, command: put, error %s",
                   duri,
@@ -273,7 +274,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
       if (rc < 0) {
         ctx->status_code = csync_errno_to_status(errno,
                                                  CSYNC_STATUS_PROPAGATE_ERROR);
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
                   "file: %s, command: get, error: %s",
                   duri,
@@ -295,7 +296,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
         /* read error */
         ctx->status_code = csync_errno_to_status(errno,
                                                  CSYNC_STATUS_PROPAGATE_ERROR);
-        strerror_r(errno,  errbuf, sizeof(errbuf));
+        c_strerror_r(errno,  errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
                   "file: %s, command: read, error: %s",
                   suri, errbuf);
@@ -312,7 +313,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
       if (bwritten < 0 || bread != bwritten) {
         ctx->status_code = csync_errno_to_status(errno,
                                                  CSYNC_STATUS_PROPAGATE_ERROR);
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
                   "file: %s, command: write, error: bread = %zu, bwritten = %zu - %s",
                   duri,
@@ -329,7 +330,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
   if (csync_vio_close(ctx, sfp) < 0) {
     ctx->status_code = csync_errno_to_status(errno,
                                              CSYNC_STATUS_PROPAGATE_ERROR);
-    strerror_r(errno, errbuf, sizeof(errbuf));
+    c_strerror_r(errno, errbuf, sizeof(errbuf));
     CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
         "file: %s, command: close, error: %s",
         suri,
@@ -346,7 +347,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
       /* stop if no space left or quota exceeded */
       case ENOSPC:
       case EDQUOT:
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
             "file: %s, command: close, error: %s",
             turi,
@@ -355,7 +356,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
         goto out;
         break;
       default:
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
             "file: %s, command: close, error: %s",
             turi, errbuf);
@@ -386,7 +387,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
         rc = 1;
         break;
     }
-    strerror_r(errno, errbuf, sizeof(errbuf));
+    c_strerror_r(errno, errbuf, sizeof(errbuf));
     CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
         "file: %s, command: stat, error: %s",
         turi,
@@ -417,7 +418,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
         rc = 1;
         break;
       }
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
                 "file: %s, command: rename, error: %s",
                 duri,
@@ -439,7 +440,7 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
           rc = 1;
           break;
       }
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
           "file: %s, command: chmod, error: %s",
           duri,
@@ -607,7 +608,7 @@ static int _csync_backup_file(CSYNC *ctx, csync_file_stat_t *st, char **duri) {
         rc = 1;
         break;
     }
-    strerror_r(errno, errbuf, sizeof(errbuf));
+    c_strerror_r(errno, errbuf, sizeof(errbuf));
     CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
         "file: %s, command: rename, error: %s",
         *duri,
@@ -719,7 +720,7 @@ static int _csync_remove_file(CSYNC *ctx, csync_file_stat_t *st) {
         rc = 1;
         break;
     }
-    strerror_r(errno, errbuf, sizeof(errbuf));
+    c_strerror_r(errno, errbuf, sizeof(errbuf));
     CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
         "file: %s, command: unlink, error: %s",
         uri,
@@ -786,7 +787,7 @@ static int _csync_new_dir(CSYNC *ctx, csync_file_stat_t *st) {
         rc = 1;
         break;
     }
-    strerror_r(errno, errbuf, sizeof(errbuf));
+    c_strerror_r(errno, errbuf, sizeof(errbuf));
     CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
         "dir: %s, command: mkdirs, error: %s",
         uri,
@@ -807,7 +808,7 @@ static int _csync_new_dir(CSYNC *ctx, csync_file_stat_t *st) {
           rc = 1;
           break;
       }
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
           "dir: %s, command: chmod, error: %s",
           uri,
@@ -888,7 +889,7 @@ static int _csync_sync_dir(CSYNC *ctx, csync_file_stat_t *st) {
           rc = 1;
           break;
       }
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
           "dir: %s, command: chmod, error: %s",
           uri,
@@ -953,7 +954,7 @@ static int _csync_remove_dir(CSYNC *ctx, csync_file_stat_t *st) {
                                              CSYNC_STATUS_PROPAGATE_ERROR);
     switch (errno) {
       case ENOMEM:
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_FATAL,
             "dir: %s, command: rmdir, error: %s",
             uri,
@@ -984,7 +985,7 @@ static int _csync_remove_dir(CSYNC *ctx, csync_file_stat_t *st) {
         rc = 0;
         break;
       default:
-        strerror_r(errno, errbuf, sizeof(errbuf));
+        c_strerror_r(errno, errbuf, sizeof(errbuf));
         CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
             "dir: %s, command: rmdir, error: %s",
             uri,

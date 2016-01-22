@@ -39,6 +39,7 @@
 
 #define CSYNC_LOG_CATEGORY_NAME "csync.lock"
 #include "csync_log.h"
+#include "c_strerror.h"
 
 static int _csync_lock_create(const char *lockfile) {
   int fd = -1;
@@ -68,7 +69,7 @@ static int _csync_lock_create(const char *lockfile) {
   fd = mkstemp(ctmpfile);
   umask(mask);
   if (fd < 0) {
-    strerror_r(errno, errbuf, sizeof(errbuf));
+    c_strerror_r(errno, errbuf, sizeof(errbuf));
     CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
         "Unable to create temporary lock file: %s - %s",
         ctmpfile,
@@ -84,7 +85,7 @@ static int _csync_lock_create(const char *lockfile) {
     CSYNC_LOG(CSYNC_LOG_PRIORITY_TRACE, "Create a hardlink from %s to %s.", ctmpfile, lockfile);
     if (link(ctmpfile, lockfile) < 0 ) {
       /* Oops, alredy locked */
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_INFO,
           "Already locked: %s - %s",
           lockfile,
@@ -93,7 +94,7 @@ static int _csync_lock_create(const char *lockfile) {
       goto out;
     }
   } else {
-    strerror_r(errno, errbuf, sizeof(errbuf));
+    c_strerror_r(errno, errbuf, sizeof(errbuf));
     CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
         "Can't create %s - %s",
         ctmpfile,
@@ -155,7 +156,7 @@ static pid_t _csync_lock_read(const char *lockfile) {
   tmp = strtol(buf, NULL, 10);
   if (tmp == 0 || tmp > 0xFFFF || errno == ERANGE) {
      /* Broken lock file */
-     strerror_r(ERANGE, errbuf, sizeof(errbuf));
+     c_strerror_r(ERANGE, errbuf, sizeof(errbuf));
      if (unlink(lockfile) < 0) {
        CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
            "Unable to remove broken lock %s - %s",
@@ -177,7 +178,7 @@ static pid_t _csync_lock_read(const char *lockfile) {
     rc = _tunlink(wlockfile);
     c_free_locale_string(wlockfile);
     if (rc < 0) {
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
                 "Unable to remove stale lock %s - %s",
                 lockfile,
@@ -212,7 +213,7 @@ void csync_lock_remove(const char *lockfile) {
 
     CSYNC_LOG(CSYNC_LOG_PRIORITY_DEBUG, "Removing lock file: %s", lockfile);
     if (_tunlink(wlockfile) < 0) {
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
           "Unable to remove lock %s - %s",
           lockfile,

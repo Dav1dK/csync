@@ -34,6 +34,7 @@
 
 #include <c_string.h>
 #include <c_alloc.h>
+#include "c_strerror.h"
 
 #include "csync_auth.h"
 #include "../src/std/c_private.h"
@@ -306,7 +307,7 @@ int main(int argc, char **argv) {
 
   if (arguments.exclude_file != NULL) {
     if (csync_add_exclude_list(csync, arguments.exclude_file) < 0) {
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       fprintf(stderr, "csync_add_exclude_list - %s: %s\n",
           arguments.exclude_file, errbuf);
       rc = 1;

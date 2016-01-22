@@ -43,6 +43,7 @@
 
 #define CSYNC_LOG_CATEGORY_NAME "csync.updater"
 #include "csync_log.h"
+#include "c_strerror.h"
 
 static int _csync_detect_update(CSYNC *ctx, const char *file,
     const csync_vio_file_stat_t *fs, const int type) {
@@ -231,7 +232,7 @@ int csync_ftw(CSYNC *ctx, const char *uri, csync_walker_fn fn,
     if (errno == EACCES) {
       return 0;
     } else {
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR,
           "opendir failed for %s - %s",
           uri,

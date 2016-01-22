@@ -45,6 +45,7 @@
 #endif
 
 #include "csync_log.h"
+#include "c_strerror.h"
 
 int csync_vio_init(CSYNC *ctx, const char *module, const char *args) {
   csync_stat_t sb;
@@ -510,7 +511,7 @@ int csync_vio_mkdirs(CSYNC *ctx, const char *uri, mode_t mode) {
         return -1;
       }
     } else if (errno != ENOENT) {
-      strerror_r(errno, errbuf, sizeof(errbuf));
+      c_strerror_r(errno, errbuf, sizeof(errbuf));
       CSYNC_LOG(CSYNC_LOG_PRIORITY_ERROR, "csync_vio_mkdirs stat failed: %s",
           errbuf);
       csync_vio_file_stat_destroy(st);
