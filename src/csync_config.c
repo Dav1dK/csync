@@ -161,13 +161,14 @@ out:
 }
 
 static int csync_config_get_int(char **str, int notfound) {
-    char *p, *endp;
+    char *endp;
     int i;
 
-    p = csync_config_get_token(str);
-    if (p && *p) {
-        i = strtol(p, &endp, 10);
-        if (p == endp) {
+    csync_config_get_token(str);
+    if (str && *str && **str) {
+        i = strtol(*str, &endp, 10);
+        if (*str == endp) {
+            /* Nothing parsed */
             return notfound;
         }
         return i;
