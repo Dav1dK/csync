@@ -91,9 +91,9 @@ int c_mkdirs(const char *path, mode_t mode) {
       return -1;
     }
   }
-  c_free_locale_string(wpath);
 
   tmp = _tmkdir(wpath, mode);
+  c_free_locale_string(wpath);
 
   if ((tmp < 0) && (errno == EEXIST)) {
     return 0;
