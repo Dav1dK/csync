@@ -187,28 +187,28 @@ static int _sftp_connect(const char *uri) {
   rc = ssh_options_set(_ssh_session, SSH_OPTIONS_TIMEOUT, &timeout);
   if (rc < 0) {
     c_strerror_r(errno, errbuf, sizeof(errbuf));
-    fprintf(stderr, "csync_sftp - error setting options: %s\n", errbuf);
+    fprintf(stderr, "csync_sftp - error setting connection timeout: %s\n", errbuf);
     goto out;
   }
 
   rc = ssh_options_set(_ssh_session, SSH_OPTIONS_COMPRESSION_C_S, "none");
   if (rc < 0) {
     c_strerror_r(errno, errbuf, sizeof(errbuf));
-    fprintf(stderr, "csync_sftp - error setting options: %s\n", errbuf);
+    fprintf(stderr, "csync_sftp - error setting connection compression: %s\n", errbuf);
     goto out;
   }
 
   rc = ssh_options_set(_ssh_session, SSH_OPTIONS_COMPRESSION_S_C, "none");
   if (rc < 0) {
     c_strerror_r(errno, errbuf, sizeof(errbuf));
-    fprintf(stderr, "csync_sftp - error setting options: %s\n", errbuf);
+    fprintf(stderr, "csync_sftp - error setting connection compression: %s\n", errbuf);
     goto out;
   }
 
   ssh_options_set(_ssh_session, SSH_OPTIONS_HOST, host);
   if (rc < 0) {
     c_strerror_r(errno, errbuf, sizeof(errbuf));
-    fprintf(stderr, "csync_sftp - error setting options: %s\n", errbuf);
+    fprintf(stderr, "csync_sftp - error setting connection host: %s\n", errbuf);
     goto out;
   }
 
@@ -216,7 +216,7 @@ static int _sftp_connect(const char *uri) {
     ssh_options_set(_ssh_session, SSH_OPTIONS_PORT, &port);
     if (rc < 0) {
       c_strerror_r(errno, errbuf, sizeof(errbuf));
-      fprintf(stderr, "csync_sftp - error setting options: %s\n", errbuf);
+      fprintf(stderr, "csync_sftp - error setting connection port: %s\n", errbuf);
       goto out;
     }
     DEBUG_SFTP(("csync_sftp - port set to: %d\n", port));
@@ -226,7 +226,7 @@ static int _sftp_connect(const char *uri) {
     ssh_options_set(_ssh_session, SSH_OPTIONS_USER, user);
     if (rc < 0) {
       c_strerror_r(errno, errbuf, sizeof(errbuf));
-      fprintf(stderr, "csync_sftp - error setting options: %s\n", errbuf);
+      fprintf(stderr, "csync_sftp - error setting sftp username: %s\n", errbuf);
       goto out;
     }
     DEBUG_SFTP(("csync_sftp - username set to: %s\n", user));
