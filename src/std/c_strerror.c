@@ -26,13 +26,14 @@
 #include "config.h"
 #include <string.h>
 #include "c_strerror.h"
+#include "c_macro.h"
 
 #ifndef HAVE_STRERROR_R
 #define strerror_r(errnum, buf, buflen) snprintf(buf, buflen, "%s", strerror(errnum))
 #endif
 
 void c_strerror_r(int errnum, char *buf, size_t buflen){
-    if(strerror_r(errnum, buf, buflen) != 0){
+    if(unlikely(strerror_r(errnum, buf, buflen) != 0)){
         strncpy(buf, "Unknown error code", buflen - 1);
         buf[buflen - 1] = '\0';
     }
