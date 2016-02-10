@@ -204,6 +204,11 @@ static int _csync_push_file(CSYNC *ctx, csync_file_stat_t *st) {
           goto out;
         }
         if(_push_to_tmp_first(ctx)) {
+          if (snprintf(turi + strlen(turi) - 6, 7, "XXXXXX") < 0) {
+            ctx->status_code = CSYNC_STATUS_PARAM_ERROR;
+            rc = -1;
+            goto out;
+          }
           if (c_tmpname(turi) < 0) {
             ctx->status_code = CSYNC_STATUS_PARAM_ERROR;
             rc = -1;
