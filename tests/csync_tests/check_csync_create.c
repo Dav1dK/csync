@@ -30,9 +30,6 @@ static void check_csync_create(void **state)
     assert_int_equal(csync->options.max_depth, MAX_DEPTH);
     assert_int_equal(csync->options.max_time_difference, MAX_TIME_DIFFERENCE);
 
-    snprintf(confdir, sizeof(confdir), "%s/%s", getenv("HOME"), CSYNC_CONF_DIR);
-    assert_string_equal(csync->options.config_dir, confdir);
-
     rc = csync_destroy(csync);
     assert_int_equal(rc, 0);
 }

@@ -42,7 +42,6 @@
 
 #include "c_lib.h"
 #include "csync_private.h"
-#include "csync_config.h"
 #include "csync_exclude.h"
 #include "csync_lock.h"
 #include "csync_statedb.h"
@@ -93,8 +92,6 @@ static int _data_cmp(const void *key, const void *data) {
 int csync_create(CSYNC **csync, const char *local, const char *remote) {
   CSYNC *ctx;
   size_t len = 0;
-  char *home;
-  int rc;
 
   ctx = c_malloc(sizeof(CSYNC));
   if (ctx == NULL) {
@@ -132,27 +129,6 @@ int csync_create(CSYNC **csync, const char *local, const char *remote) {
   ctx->pwd.uid = getuid();
   ctx->pwd.euid = geteuid();
 
-  home = csync_get_user_home_dir();
-  if (home == NULL) {
-    SAFE_FREE(ctx->local.uri);
-    SAFE_FREE(ctx->remote.uri);
-    SAFE_FREE(ctx);
-    errno = ENOMEM;
-    ctx->status_code = CSYNC_STATUS_MEMORY_ERROR;
-    return -1;
-  }
-
-  rc = asprintf(&ctx->options.config_dir, "%s/%s", home, CSYNC_CONF_DIR);
-  SAFE_FREE(home);
-  if (rc < 0) {
-    SAFE_FREE(ctx->local.uri);
-    SAFE_FREE(ctx->remote.uri);
-    SAFE_FREE(ctx);
-    errno = ENOMEM;
-    ctx->status_code = CSYNC_STATUS_MEMORY_ERROR;
-    return -1;
-  }
-
   *csync = ctx;
   return 0;
 }
@@ -163,7 +139,6 @@ int csync_init(CSYNC *ctx) {
   char *exclude = NULL;
   char *lock = NULL;
   char *config = NULL;
-  char errbuf[256] = {0};
   if (ctx == NULL) {
     errno = EBADF;
     return -1;
@@ -195,47 +170,6 @@ int csync_init(CSYNC *ctx) {
     goto out;
   }
 #endif
-
-  /* load config file */
-  if (asprintf(&config, "%s/%s", ctx->options.config_dir, CSYNC_CONF_FILE) < 0) {
-    ctx->status_code = CSYNC_STATUS_MEMORY_ERROR;
-    rc = -1;
-    goto out;
-  }
-
-  rc = csync_config_parse_file(ctx, config);
-  if (rc < 0) {
-      CSYNC_LOG(CSYNC_LOG_PRIORITY_WARN, "Could not load config file %s, using defaults.", config);
-  }
-
-#ifndef _WIN32
-  /* load global exclude list */
-  if (asprintf(&exclude, "%s/csync/%s", SYSCONFDIR, CSYNC_EXCLUDE_FILE) < 0) {
-    rc = -1;
-    ctx->status_code = CSYNC_STATUS_MEMORY_ERROR;
-    goto out;
-  }
-
-  if (csync_exclude_load(ctx, exclude) < 0) {
-    strerror_r(errno, errbuf, sizeof(errbuf));
-    CSYNC_LOG(CSYNC_LOG_PRIORITY_WARN, "Could not load %s - %s", exclude,
-              errbuf);
-  }
-  SAFE_FREE(exclude);
-#endif
-  /* load exclude list */
-  if (asprintf(&exclude, "%s/%s", ctx->options.config_dir,
-        CSYNC_EXCLUDE_FILE) < 0) {
-    ctx->status_code = CSYNC_STATUS_MEMORY_ERROR;
-    rc = -1;
-    goto out;
-  }
-
-  if (csync_exclude_load(ctx, exclude) < 0) {
-    strerror_r(errno, errbuf, sizeof(errbuf));
-    CSYNC_LOG(CSYNC_LOG_PRIORITY_INFO, "Could not load %s - %s", exclude,
-              errbuf);
-  }
 
   /* create/load statedb */
   if (! csync_is_statedb_disabled(ctx)) {
@@ -455,7 +389,7 @@ int csync_reconcile(CSYNC *ctx) {
       return -1;
   }
 
-  /* Reconciliation for local replica */
+  /* Reconciliation for remote replica */
   csync_gettime(&start);
 
   ctx->current = REMOTE_REPLICA;
@@ -880,13 +814,18 @@ const char *csync_version(int req_version) {
   return NULL;
 }
 
-int csync_add_exclude_list(CSYNC *ctx, const char *path) {
-  if (ctx == NULL || path == NULL) {
-    return -1;
-  }
-  ctx->status_code = CSYNC_STATUS_OK;
+int csync_add_exclude_string(CSYNC *ctx, const char *path){
+    if (ctx == NULL || path == NULL) {
+        return -1;
+    }
+    if (ctx->status & CSYNC_STATUS_INIT) {
+        fprintf(stderr, "This function must be called before initialization.");
+        ctx->status_code = CSYNC_STATUS_CSYNC_STATUS_ERROR;
+        return -1;
+    }
+    ctx->status_code = CSYNC_STATUS_OK;
 
-  return csync_exclude_load(ctx, path);
+    return csync_exclude_add(ctx, path);
 }
 
 const char *csync_get_config_dir(CSYNC *ctx) {
@@ -899,6 +838,7 @@ const char *csync_get_config_dir(CSYNC *ctx) {
 
 int csync_set_config_dir(CSYNC *ctx, const char *path) {
   if (ctx == NULL || path == NULL) {
+    errno = EINVAL;
     return -1;
   }
   ctx->status_code = CSYNC_STATUS_OK;
@@ -1029,7 +969,7 @@ int csync_get_status(CSYNC *ctx) {
   return ctx->status;
 }
 
-int csync_enable_conflictcopys(CSYNC* ctx){
+int csync_set_conflictcopys(CSYNC* ctx, bool enable){
   if (ctx == NULL) {
     return -1;
   }
@@ -1041,9 +981,41 @@ int csync_enable_conflictcopys(CSYNC* ctx){
     return -1;
   }
 
-  ctx->options.with_conflict_copys=true;
+  ctx->options.with_conflict_copys = enable;
 
   return 0;
+}
+
+int csync_set_max_timediff(CSYNC *ctx, time_t time){
+    if (ctx == NULL) {
+        return -1;
+    }
+    
+    ctx->status_code = CSYNC_STATUS_OK;
+    
+    if (ctx->status & CSYNC_STATUS_INIT) {
+        fprintf(stderr, "This function must be called before initialization.");
+        ctx->status_code = CSYNC_STATUS_CSYNC_STATUS_ERROR;
+        return -1;
+    }
+    ctx->options.max_time_difference = time;
+    return 0;
+}
+
+int csync_set_max_dir_depth(CSYNC *ctx, unsigned int depth){
+    if (ctx == NULL) {
+        return -1;
+    }
+    
+    ctx->status_code = CSYNC_STATUS_OK;
+    
+    if (ctx->status & CSYNC_STATUS_INIT) {
+        fprintf(stderr, "This function must be called before initialization.");
+        ctx->status_code = CSYNC_STATUS_CSYNC_STATUS_ERROR;
+        return -1;
+    }
+    ctx->options.max_depth = depth;
+    return 0;
 }
 
 int csync_set_local_only( CSYNC *ctx, bool local_only ) {

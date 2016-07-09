@@ -29,7 +29,17 @@
  *
  * @return  0 on success, -1 if an error occured with errno set.
  */
-int csync_exclude_load(CSYNC *ctx, const char *fname);
+//int csync_exclude_load(CSYNC *ctx, const char *fname);
+
+/**
+ * @brief Add a path to the exclude list
+ *
+ * @param ctx    The context of the synchronizer.
+ * @param string The path to exclude
+ *
+ * @return  0 on success, -1 if an error occured with errno set.
+ */
+int csync_exclude_add(CSYNC *ctx, const char *string);
 
 /**
  * @brief Destroy the exclude list in memory.

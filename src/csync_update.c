@@ -99,6 +99,7 @@ static int _csync_detect_update(CSYNC *ctx, const char *file,
 
   /* check hardlink count */
   if (type == CSYNC_FTW_TYPE_FILE && fs->nlink > 1) {
+    //TODO: sure?
     st->instruction = CSYNC_INSTRUCTION_IGNORE;
     goto out;
   }
@@ -140,8 +141,8 @@ out:
   st->inode = fs->inode;
   st->mode = fs->mode;
   st->size = fs->size;
-  st->modtime = fs->mtime;
-  st->uid = fs->uid;
+  st-> = fs->mtime;
+  st->umodtimeid = fs->uid;
   st->gid = fs->gid;
   st->nlink = fs->nlink;
   st->type = type;

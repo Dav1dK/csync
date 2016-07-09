@@ -34,7 +34,7 @@
 #define CSYNC_LOG_CATEGORY_NAME "csync.exclude"
 #include "csync_log.h"
 
-static int _csync_exclude_add(CSYNC *ctx, const char *string) {
+int csync_exclude_add(CSYNC *ctx, const char *string) {
     c_strlist_t *list;
 
     if (ctx->excludes == NULL) {
@@ -54,7 +54,7 @@ static int _csync_exclude_add(CSYNC *ctx, const char *string) {
 
     return c_strlist_add(ctx->excludes, string);
 }
-
+/*
 int csync_exclude_load(CSYNC *ctx, const char *fname) {
   int fd = -1;
   int i = 0;
@@ -105,7 +105,7 @@ int csync_exclude_load(CSYNC *ctx, const char *fname) {
   }
   buf[size] = '\0';
 
-  /* FIXME: Use fgets and don't add duplicates */
+  //FIXME: Use fgets and don't add duplicates
   entry = buf;
   for (i = 0; i < size; i++) {
     if (buf[i] == '\n') {
@@ -113,7 +113,7 @@ int csync_exclude_load(CSYNC *ctx, const char *fname) {
         buf[i] = '\0';
         if (*entry != '#' || *entry == '\n') {
           CSYNC_LOG(CSYNC_LOG_PRIORITY_TRACE, "Adding entry: %s", entry);
-          rc = _csync_exclude_add(ctx, entry);
+          rc = csync_exclude_add(ctx, entry);
           if (rc < 0) {
               goto out;
           }
@@ -129,7 +129,7 @@ out:
   close(fd);
   return rc;
 }
-
+*/
 void csync_exclude_destroy(CSYNC *ctx) {
   c_strlist_destroy(ctx->excludes);
 }

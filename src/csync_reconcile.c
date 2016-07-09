@@ -77,7 +77,9 @@ static int _csync_merge_algorithm_visitor(void *obj, void *data) {
       case CSYNC_INSTRUCTION_RENAME:
         cur->instruction = CSYNC_INSTRUCTION_NEW;
         break;
+	//TODO: new ??
       default:
+	CSYNC_LOG(CSYNC_LOG_PRIORITY_WARN,"_csync_merge_algorithm_visitor:82: achtung, sollte nicht passieren?");
         break;
     }
   } else {

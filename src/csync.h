@@ -62,14 +62,8 @@ extern "C" {
                                            LIBCSYNC_VERSION_MINOR, \
                                            LIBCSYNC_VERSION_MICRO)
 
-/*
- * csync file declarations
- */
-#define CSYNC_CONF_DIR ".csync"
-#define CSYNC_CONF_FILE "csync.conf"
-#define CSYNC_EXCLUDE_FILE "csync_exclude.conf"
 #define CSYNC_LOCK_FILE "lock"
-
+                                           
 /**
   * Instruction enum. In the file traversal structure, it describes
   * the csync state of a file.
@@ -292,15 +286,15 @@ int csync_destroy(CSYNC *ctx);
 const char *csync_version(int req_version);
 
 /**
- * @brief Add an additional exclude list.
+ * @brief Add an path to the list of excluded paths
  *
  * @param ctx           The context to add the exclude list.
  *
- * @param path          The path pointing to the file.
+ * @param path          The path to be excluded
  *
  * @return              0 on success, less than 0 if an error occured.
  */
-int csync_add_exclude_list(CSYNC *ctx, const char *path);
+int csync_add_exclude_string(CSYNC *ctx, const char *path);
 
 /**
  * @brief Get the config directory.
@@ -321,15 +315,6 @@ const char *csync_get_config_dir(CSYNC *ctx);
  * @return              0 on success, less than 0 if an error occured.
  */
 int csync_set_config_dir(CSYNC *ctx, const char *path);
-
-/**
- * @brief Remove the complete config directory.
- *
- * @param ctx           The csync context.
- *
- * @return              0 on success, less than 0 if an error occured.
- */
-int csync_remove_config_dir(CSYNC *ctx);
 
 /**
  * @brief Enable the usage of the statedb. It is enabled by default.
@@ -463,10 +448,34 @@ const char *csync_get_statedb_file(CSYNC *ctx);
  * @brief Enable the creation of backup copys if files are changed on both sides
  *
  * @param ctx           The csync context.
+ * 
+ * @param enable        Whether backup copies are enabled or disabled
  *
  * @return              0 on success, less than 0 if an error occured.
  */
-int csync_enable_conflictcopys(CSYNC *ctx);
+int csync_set_conflictcopys(CSYNC *ctx, bool enable);
+
+/**
+ * @brief Set the maximum time difference between both systems
+ *
+ * @param ctx           The csync context.
+ * 
+ * @param time          The timedifference in seconds
+ *
+ * @return              0 on success, less than 0 if an error occured.
+ */
+int csync_set_max_timediff(CSYNC *ctx, time_t time);
+
+/**
+ * @brief Set the maximum recursive directory depth
+ *
+ * @param ctx           The csync context.
+ * 
+ * @param depth         The recursion depth
+ *
+ * @return              0 on success, less than 0 if an error occured.
+ */
+int csync_set_max_dir_depth(CSYNC *ctx, unsigned int depth);
 
 /**
   * @brief Flag to tell csync that only a local run is intended. Call before csync_init

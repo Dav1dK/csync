@@ -30,6 +30,7 @@ endif()
 set(client_SRCS
   csync_client.c
   csync_auth.c
+  csync_config.c
 )
 
 include_directories(

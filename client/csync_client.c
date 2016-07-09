@@ -29,15 +29,27 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <csync.h>
 
 #include <c_string.h>
 #include <c_alloc.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#include "c_lib.h"
 #include "csync_auth.h"
+#include "csync_config.h"
+#include "csync_client.h"
 #include "../src/std/c_private.h"
 #include "../src/csync_misc.h"
+#include "../src/csync_macros.h"
+#include "../src/csync_misc.h"
+#include "../src/std/c_strerror.h"
 
 const char *csync_program_version = "csync commandline client "
   CSYNC_STRINGIFY(LIBCSYNC_VERSION);
@@ -132,6 +144,83 @@ static int c_atoi(const char *string, int *result)
     return 0;
 }
 
+static int csync_load_exclude_file(CSYNC *ctx, const char *fname) {
+    int fd = -1;
+    int i = 0;
+    int rc = -1;
+    off_t size;
+    char *buf = NULL;
+    char *entry = NULL;
+    mbchar_t *w_fname;
+    
+    if (ctx == NULL || fname == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    
+    #ifdef _WIN32
+    _fmode = _O_BINARY;
+    #endif
+    
+    w_fname = c_utf8_to_locale(fname);
+    if (w_fname == NULL) {
+        return -1;
+    }
+    
+    fd = _topen(w_fname, O_RDONLY);
+    c_free_locale_string(w_fname);
+    if (fd < 0) {
+        return -1;
+    }
+    
+    size = lseek(fd, 0, SEEK_END);
+    if (size < 0) {
+        rc = -1;
+        goto out;
+    }
+    lseek(fd, 0, SEEK_SET);
+    if (size == 0) {
+        rc = 0;
+        goto out;
+    }
+    buf = c_malloc(size + 1);
+    if (buf == NULL) {
+        rc = -1;
+        goto out;
+    }
+    
+    if (read(fd, buf, size) != size) {
+        rc = -1;
+        goto out;
+    }
+    buf[size] = '\0';
+    
+    /* FIXME: Use fgets and don't add duplicates */
+    entry = buf;
+    for (i = 0; i < size; i++) {
+        if (buf[i] == '\n') {
+            if (entry != buf + i) {
+                buf[i] = '\0';
+                if (*entry != '#' || *entry == '\n') {
+                    //TODO: Fix logging
+                    //CSYNC_LOG(CSYNC_LOG_PRIORITY_TRACE, "Adding entry: %s", entry);
+                    rc = csync_add_exclude_string(ctx, entry);
+                    if (rc < 0) {
+                        goto out;
+                    }
+                }
+            }
+            entry = buf + i + 1;
+        }
+    }
+    
+    rc = 0;
+    out:
+    SAFE_FREE(buf);
+    close(fd);
+    return rc;
+}
+
 static int parse_args(struct argument_s *csync_args, int argc, char **argv)
 {
     while(optind < argc) {
@@ -212,6 +301,21 @@ static int parse_args(struct argument_s *csync_args, int argc, char **argv)
     return optind;
 }
 
+static bool get_conf_dir(char *buf, size_t buflen){
+    char* home;
+    
+    if((home = csync_get_user_home_dir()) == 0) {
+        errno = ENOMEM;
+        return false;
+    }
+    if(snprintf(buf, buflen, "%s/%s", home, CSYNC_CONF_DIR) >= buflen){
+        errno = ENAMETOOLONG;
+        return false;
+    }
+    free(home);
+    return true;
+}
+
 static void _overall_callback(const char *file_name,
                               int file_no,
                               int file_cnt,
@@ -229,6 +333,7 @@ int main(int argc, char **argv) {
   char errbuf[256] = {0};
   int curser = 0;
   int i;
+  char config_dir[PATH_MAX], *config = 0, *exclude = NULL;
 
   struct argument_s arguments;
 
@@ -259,6 +364,52 @@ int main(int argc, char **argv) {
     fprintf(stderr, "csync_create: failed\n");
     exit(1);
   }
+  
+  //Handle config file
+  if(get_conf_dir(config_dir, PATH_MAX) == false){
+      fprintf(stderr, "Can not set config directory: %s\n", c_strerror_r(errno, errbuf, sizeof(errbuf)));
+      rc = 1;
+      goto out;
+  }
+  if (asprintf(&config, "%s/%s", config_dir, CSYNC_CONF_FILE) < 0) {
+      errno = ENOMEM;
+      fprintf(stderr, "Can not read config file: %s\n", c_strerror_r(errno, errbuf, sizeof(errbuf)));
+      rc = 1;
+      goto out;
+  }
+  if(csync_config_parse_file(csync, config) < 0){
+      fprintf(stderr, "Can not read config file %s: %s\n", config, c_strerror_r(errno, errbuf, sizeof(errbuf)));
+      rc = 1;
+      goto out;
+  }
+  if(csync_set_config_dir(csync, config_dir) < 0){
+      fprintf(stderr, "Can not set config file %s: %s\n", config, c_strerror_r(errno, errbuf, sizeof(errbuf)));
+      rc = 1;
+      goto out;
+  }
+  
+  /* load global exclude list */
+  if (asprintf(&exclude, "%s/csync/%s", SYSCONFDIR, CSYNC_EXCLUDE_FILE) < 0) {
+      fprintf(stderr, "Can not read exclude file: %s\n", c_strerror_r(errno, errbuf, sizeof(errbuf)));
+  } else if (csync_load_exclude_file(csync, exclude) < 0){
+      fprintf(stderr, "Can not read exclude file %s: %s\n", exclude, c_strerror_r(errno, errbuf, sizeof(errbuf)));
+      SAFE_FREE(exclude);
+  }
+  
+  /* load user exclude list */
+  if (asprintf(&exclude, "%s/%s", config_dir, CSYNC_EXCLUDE_FILE) < 0) {
+      fprintf(stderr, "Can not read exclude file: %s\n", c_strerror_r(errno, errbuf, sizeof(errbuf)));
+  } else if(csync_load_exclude_file(csync, exclude) < 0) {
+      fprintf(stderr, "Can not read exclude file %s: %s\n", exclude, c_strerror_r(errno, errbuf, sizeof(errbuf)));
+      SAFE_FREE(exclude);
+  }
+  
+  /* load command argument exclude file*/
+  if (arguments.exclude_file != NULL) {
+      if (csync_load_exclude_file(csync, arguments.exclude_file) < 0) {
+          fprintf(stderr, "Can not read exclude file %s: %s\n", arguments.exclude_file, c_strerror_r(errno, errbuf, sizeof(errbuf)));
+      }
+  }
 
   /*
    * Protect password from ps listing
@@ -278,7 +429,11 @@ int main(int argc, char **argv) {
   }
 
   csync_set_auth_callback(csync, csync_getpass);
-
+  
+  if (arguments.verbose > 0) {
+      csync_set_overall_progress_callback(csync, _overall_callback);
+  }
+  
   if (arguments.disable_statedb) {
     csync_disable_statedb(csync);
   }
@@ -291,27 +446,13 @@ int main(int argc, char **argv) {
 
   if(arguments.with_conflict_copys)
   {
-    csync_enable_conflictcopys(csync);
+    csync_set_conflictcopys(csync, true);
   }
 
   if (csync_init(csync) < 0) {
     perror("csync_init");
     rc = 1;
     goto out;
-  }
-
-  if (arguments.verbose > 0) {
-      csync_set_overall_progress_callback(csync, _overall_callback);
-  }
-
-  if (arguments.exclude_file != NULL) {
-    if (csync_add_exclude_list(csync, arguments.exclude_file) < 0) {
-      strerror_r(errno, errbuf, sizeof(errbuf));
-      fprintf(stderr, "csync_add_exclude_list - %s: %s\n",
-          arguments.exclude_file, errbuf);
-      rc = 1;
-      goto out;
-    }
   }
 
   if (arguments.update) {
@@ -343,6 +484,7 @@ int main(int argc, char **argv) {
   }
 
 out:
+  SAFE_FREE(config);
   csync_destroy(csync);
 
   return rc;
