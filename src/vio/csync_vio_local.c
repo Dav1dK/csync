@@ -236,19 +236,12 @@ csync_vio_file_stat_t *csync_vio_local_readdir(csync_vio_method_handle_t *dhandl
   /* Check for availability of d_type, see manpage. */
 #ifdef _DIRENT_HAVE_D_TYPE
   switch (dirent->d_type) {
-    case DT_FIFO:
-    case DT_SOCK:
-    case DT_CHR:
-    case DT_BLK:
-      break;
     case DT_DIR:
+      file_stat->fields |= CSYNC_VIO_FILE_STAT_FIELDS_TYPE;
+      file_stat->type = CSYNC_VIO_FILE_TYPE_DIRECTORY;
     case DT_REG:
       file_stat->fields |= CSYNC_VIO_FILE_STAT_FIELDS_TYPE;
-      if (dirent->d_type == DT_DIR) {
-        file_stat->type = CSYNC_VIO_FILE_TYPE_DIRECTORY;
-      } else {
-        file_stat->type = CSYNC_VIO_FILE_TYPE_REGULAR;
-      }
+      file_stat->type = CSYNC_VIO_FILE_TYPE_REGULAR;
       break;
     case DT_UNKNOWN:
       file_stat->fields |= CSYNC_VIO_FILE_STAT_FIELDS_TYPE;
