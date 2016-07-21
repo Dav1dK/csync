@@ -311,7 +311,7 @@ int csync_vio_local_stat(const char *uri, csync_vio_file_stat_t *buf) {
       buf->type = CSYNC_VIO_FILE_TYPE_REGULAR;
       break;
     case S_IFSOCK:
-      buf->type = CSYNC_VIO_FILE_TYPE_SYMBOLIC_LINK;
+      buf->type = CSYNC_VIO_FILE_TYPE_SOCKET;
       break;
     default:
       buf->type = CSYNC_VIO_FILE_TYPE_UNKNOWN;
