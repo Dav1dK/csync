@@ -311,8 +311,6 @@ int csync_ftw(CSYNC *ctx, const char *uri, csync_walker_fn fn,
         case CSYNC_VIO_FILE_TYPE_BLOCK_DEVICE:
         case CSYNC_VIO_FILE_TYPE_CHARACTER_DEVICE:
         case CSYNC_VIO_FILE_TYPE_SOCKET:
-          flag = CSYNC_FTW_FLAG_SPEC;
-          break;
         case CSYNC_VIO_FILE_TYPE_FIFO:
           flag = CSYNC_FTW_FLAG_SPEC;
           break;
