@@ -111,9 +111,9 @@ static int _csync_detect_update(CSYNC *ctx, const char *file,
       /* we have an update! */
       if (fs->mtime > tmp->modtime) {
         st->instruction = CSYNC_INSTRUCTION_EVAL;
-        goto out;
+      } else {
+        st->instruction = CSYNC_INSTRUCTION_NONE;
       }
-      st->instruction = CSYNC_INSTRUCTION_NONE;
     } else {
       /* check if the file has been renamed */
       if (ctx->current == LOCAL_REPLICA) {
@@ -122,15 +122,14 @@ static int _csync_detect_update(CSYNC *ctx, const char *file,
         if (tmp && tmp->inode == fs->inode) {
           /* inode found so the file has been renamed */
           st->instruction = CSYNC_INSTRUCTION_RENAME;
-          goto out;
         } else {
           /* file not found in statedb */
           st->instruction = CSYNC_INSTRUCTION_NEW;
-          goto out;
         }
+      } else {
+        /* remote and file not found in statedb */
+        st->instruction = CSYNC_INSTRUCTION_NEW;
       }
-      /* remote and file not found in statedb */
-      st->instruction = CSYNC_INSTRUCTION_NEW;
     }
   } else  {
     st->instruction = CSYNC_INSTRUCTION_NEW;
