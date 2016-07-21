@@ -285,7 +285,6 @@ int csync_vio_local_stat(const char *uri, csync_vio_file_stat_t *buf) {
   buf->name = c_basename(uri);
 
   if (buf->name == NULL) {
-    csync_vio_file_stat_destroy(buf);
     c_free_locale_string(wuri);
     return -1;
   }
