@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <assert.h>
+#include <stddef.h>
 
 #include "c_alloc.h"
 #include "c_path.h"
@@ -507,4 +509,84 @@ C_PATHINFO * c_split_path(const char* pathSrc)
     return pathinfo;
 }
 
+static char* _next_slash(char *str) {
+    while (*str && *str != '/') {
+        str++;
+    }
+    return str;
+}
 
+static void _strmove_left(char *begin, ptrdiff_t offset)
+{
+    char *w;
+    assert (offset >= 0);
+    w = begin;
+    while (w[offset]) {
+        *w = w[offset];
+        w++;
+    }
+    *w = '\0';
+}
+
+char *c_canonicalize_path(const char* path) {
+#ifdef _WIN32
+#error This doesn't handle windows paths correctly
+#endif
+    int len;
+    char* last_folder;
+    char* curr;
+    int move;
+
+    char *canonical = NULL;
+    if (c_parse_uri(path, NULL, NULL, NULL, NULL, NULL, &canonical) < 0) {
+        SAFE_FREE(canonical);
+        return NULL;
+    }
+
+    len = strlen(canonical);
+    last_folder;
+    curr = canonical;
+
+    if (canonical[0] == '\0')
+        return NULL;
+
+    if (canonical[0] != '/')
+        return NULL;
+
+    while(*curr) {
+        /* Remove double slashes */
+        if (curr[1] == '/') {
+            _strmove_left(curr, 1);
+            continue;
+        }
+
+        if (curr[1] == '.' && (curr[2] == '/' || curr[2] == '\0')) {
+            /* Delete a "/./" */
+            _strmove_left(curr, 2);
+            continue;
+        }
+
+        if (curr[1] == '.' && curr[2] == '.' && (curr[3] == '/' || curr[3] == '\0')) {
+            /* Calculate how much to move the string, to skipt a "testdir/.." */
+            if (curr > canonical) {
+                last_folder = curr - 1;
+                while (*last_folder != '/')
+                    last_folder--;
+            } else
+                last_folder = curr;
+
+            move = curr - last_folder + 3;
+            _strmove_left(last_folder + 1, move);
+            curr = last_folder;
+            continue;
+        }
+
+        curr = _next_slash(curr + 1);
+    }
+
+    len = strlen(canonical);
+    if (len > 1 && canonical[len - 1] == '/')
+        canonical[len - 1] = '\0';
+
+    return canonical;
+}

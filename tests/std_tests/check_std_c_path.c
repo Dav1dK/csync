@@ -175,6 +175,64 @@ static void check_c_parse_uri(void **state)
     free(path);
 }
 
+static void check_canonicalize_uri(void **state) {
+    char *uri;
+
+    (void) state; /* unused */
+
+    uri = c_canonicalize_path("/usr/lib/");
+    assert_string_equal(uri, "/usr/lib");
+    free(uri);
+
+    uri = c_canonicalize_path("/usr/lib/../");
+    assert_string_equal(uri, "/usr");
+    free(uri);
+
+    uri = c_canonicalize_path("/usr/lib/..");
+    assert_string_equal(uri, "/usr");
+    free(uri);
+
+    uri = c_canonicalize_path("/usr/lib/../lib");
+    assert_string_equal(uri, "/usr/lib");
+    free(uri);
+
+    uri = c_canonicalize_path("/usr//lib/");
+    assert_string_equal(uri, "/usr/lib");
+    free(uri);
+
+    uri = c_canonicalize_path("/usr/./lib/");
+    assert_string_equal(uri, "/usr/lib");
+    free(uri);
+
+    uri = c_canonicalize_path("/usr/lib//./");
+    assert_string_equal(uri, "/usr/lib");
+    free(uri);
+
+    uri = c_canonicalize_path("/../");
+    assert_string_equal(uri, "/");
+    free(uri);
+
+    uri = c_canonicalize_path("/..");
+    assert_string_equal(uri, "/");
+    free(uri);
+
+    uri = c_canonicalize_path("/./lib");
+    assert_string_equal(uri, "/lib");
+    free(uri);
+
+    uri = c_canonicalize_path("/..a");
+    assert_string_equal(uri, "/..a");
+    free(uri);
+
+    uri = c_canonicalize_path("/usr/lib/./../lib/.");
+    assert_string_equal(uri, "/usr/lib");
+    free(uri);
+
+    uri = c_canonicalize_path("////");
+    assert_string_equal(uri, "/");
+    free(uri);
+}
+
 int torture_run_tests(void)
 {
   const UnitTest tests[] = {
@@ -184,6 +242,7 @@ int torture_run_tests(void)
       unit_test(check_c_dirname_uri),
       unit_test(check_c_parse_uri),
       unit_test(check_c_tmpname),
+      unit_test(check_canonicalize_uri),
   };
 
   return run_tests(tests);

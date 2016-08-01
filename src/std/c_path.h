@@ -129,6 +129,17 @@ typedef struct
  */
 C_PATHINFO * c_split_path(const char* pathSrc);
 
+/**
+ * @brief Canonicalize a path
+ *
+ * Canonicalize a given path, which means to replace all //, /./ and /../ parts
+ * of the path.
+ *
+ * @param path The path to canonicalize. It needs to be absolute.
+ *
+ * @return The canonicalized path
+ */
+char *c_canonicalize_path(const char* path);
 
 /**
  * }@
