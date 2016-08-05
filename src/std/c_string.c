@@ -321,7 +321,7 @@ char* c_utf8_from_locale(const mbchar_t *wstr)
 #ifdef WITH_ICONV
   dst = c_iconv(wstr, iconv_from_native);
 #else
-  dst = wstr;
+  dst = c_strdup(wstr);
 #endif
 #endif
   return dst;
@@ -358,7 +358,7 @@ mbchar_t* c_utf8_to_locale(const char *str)
 #ifdef WITH_ICONV
   dst = c_iconv(str, iconv_to_native);
 #else
-  dst = str;
+  dst = c_strdup(str);
 #endif
 #endif
   return dst;

@@ -190,8 +190,6 @@ char *c_lowercase(const char* str);
  */
 mbchar_t* c_utf8_to_locale(const char *wstr);
 
-#if defined(_WIN32) || defined(WITH_ICONV)
-
 /**
  * @brief Free buffer malloced by c_utf8_from_locale or c_utf8_to_locale().
  *
@@ -210,9 +208,6 @@ mbchar_t* c_utf8_to_locale(const char *wstr);
  *
  */
 #define c_free_locale_string(x) SAFE_FREE(x)
-#else
-#define c_free_locale_string(x) (void)x
-#endif
 
 /**
  * }@
