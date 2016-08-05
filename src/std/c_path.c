@@ -540,6 +540,7 @@ char *c_canonicalize_path(const char* path) {
     char *canonical = NULL;
     if (c_parse_uri(path, NULL, NULL, NULL, NULL, NULL, &canonical) < 0) {
         SAFE_FREE(canonical);
+        errno = EINVAL;
         return NULL;
     }
 
@@ -547,11 +548,17 @@ char *c_canonicalize_path(const char* path) {
     last_folder;
     curr = canonical;
 
-    if (canonical[0] == '\0')
+    if (canonical[0] == '\0') {
+        errno = EINVAL;
+        SAFE_FREE(canonical);
         return NULL;
+    }
 
-    if (canonical[0] != '/')
+    if (canonical[0] != '/') {
+        errno = EINVAL;
+        SAFE_FREE(canonical);
         return NULL;
+    }
 
     while(*curr) {
         /* Remove double slashes */
