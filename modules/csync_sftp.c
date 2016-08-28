@@ -946,7 +946,6 @@ static int _sftp_utimes(const char *uri, const struct timeval *times) {
 }
 
 static struct csync_vio_capabilities_s _sftp_capabilities = {
-    .atomar_copy_support = false
 };
 
 static struct csync_vio_capabilities_s *_sftp_get_capabilities(void)
