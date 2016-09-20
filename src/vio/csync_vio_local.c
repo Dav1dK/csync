@@ -392,3 +392,15 @@ int csync_vio_local_chown(const char *uri, uid_t owner, gid_t group) {
 int csync_vio_local_utimes(const char *uri, const struct timeval *times) {
     return c_utimes(uri, times);
 }
+
+bool csync_vio_local_is_absolute(const char* uri) {
+#ifdef _WIN32
+    if (strlen(uri) >= 3 && uri[1] == ':' && uri[2] == '/')
+        return true;
+#endif
+
+    if (uri[0] == '/')
+        return true;
+
+    return false;
+}

@@ -37,6 +37,7 @@ struct csync_vio_capabilities_s {
  bool atomar_copy_support;
  bool get_support;
  bool put_support;
+ bool symlink_support;
 };
 
 typedef struct csync_vio_capabilities_s csync_vio_capabilities_t;
@@ -83,6 +84,8 @@ typedef int (*csync_method_put_fn)(csync_vio_method_handle_t *flocal,
                                    csync_vio_method_handle_t *fremote,
                                    csync_vio_file_stat_t *st);
 
+typedef bool (*csync_method_is_absolute)(const char* uri);
+
 struct csync_vio_method_s {
   size_t method_table_size;           /* Used for versioning */
   csync_method_get_capabilities_fn get_capabilities;
@@ -108,6 +111,8 @@ struct csync_vio_method_s {
   csync_method_commit_fn commit;
   csync_method_put_fn put;
   csync_method_get_fn get;
+  /* is_absolute is required to be present, if the module has symlinks support */
+  csync_method_is_absolute is_absolute;
 };
 
 #endif /* _CSYNC_VIO_H */

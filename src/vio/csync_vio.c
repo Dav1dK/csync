@@ -160,6 +160,7 @@ int csync_vio_init(CSYNC *ctx, const char *module, const char *args) {
   ctx->module.capabilities.atomar_copy_support = false;
   ctx->module.capabilities.put_support         = false;
   ctx->module.capabilities.get_support         = false;
+  ctx->module.capabilities.symlink_support     = false;
 
   /* Load the module capabilities from the module if it implements the it. */
   if( VIO_METHOD_HAS_FUNC(m, get_capabilities)) {
@@ -675,4 +676,17 @@ int csync_vio_commit(CSYNC *ctx) {
   }
 
   return rc;
+}
+
+bool csync_vio_is_absolute(CSYNC *ctx, const char *uri) {
+    switch(ctx->replica) {
+        case REMOTE_REPLICA:
+            return ctx->module.method->is_absolute(uri);
+            break;
+        case LOCAL_REPLICA:
+            return csync_vio_local_is_absolute(uri);
+            break;
+        default:
+            return false;
+    }
 }

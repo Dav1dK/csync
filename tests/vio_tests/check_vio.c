@@ -528,6 +528,18 @@ static void check_csync_vio_utimes(void **state)
     c_free_locale_string(file);
 }
 
+static void check_csync_vio_is_absolute(void **state)
+{
+    CSYNC *csync = *state;
+
+    assert_true(csync_vio_is_absolute(csync, "/test"));
+    assert_false(csync_vio_is_absolute(csync, "test/test"));
+
+#ifdef _WIN32
+    assert_true(csync_vio_is_absolute(csync, "C:\hi/"));
+#endif
+}
+
 int torture_run_tests(void)
 {
     const UnitTest tests[] = {

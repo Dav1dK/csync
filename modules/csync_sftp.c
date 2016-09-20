@@ -945,7 +945,12 @@ static int _sftp_utimes(const char *uri, const struct timeval *times) {
   return rc;
 }
 
+static bool _is_absolute(const char *uri) {
+    return (uri[0] == '/');
+}
+
 static struct csync_vio_capabilities_s _sftp_capabilities = {
+    .symlink_support = true
 };
 
 static struct csync_vio_capabilities_s *_sftp_get_capabilities(void)
@@ -972,7 +977,8 @@ csync_vio_method_t _method = {
   .unlink = _sftp_unlink,
   .chmod = _sftp_chmod,
   .chown = _sftp_chown,
-  .utimes = _sftp_utimes
+  .utimes = _sftp_utimes,
+  .is_absolute = _is_absolute
 };
 
 csync_vio_method_t *vio_module_init(const char *method_name, const char *args,

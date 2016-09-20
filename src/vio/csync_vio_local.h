@@ -49,4 +49,6 @@ int csync_vio_local_chown(const char *uri, uid_t owner, gid_t group);
 
 int csync_vio_local_utimes(const char *uri, const struct timeval *times);
 
+bool csync_vio_local_is_absolute(const char* uri);
+
 #endif /* _CSYNC_VIO_LOCAL_H */

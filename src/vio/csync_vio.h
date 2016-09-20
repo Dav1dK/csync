@@ -65,4 +65,6 @@ int csync_vio_commit(CSYNC *ctx);
 
 int csync_vio_getfd(csync_vio_handle_t *fhandle);
 
+bool csync_vio_is_absolute(CSYNC *ctx, const char *uri);
+
 #endif /* _CSYNC_VIO_H */
