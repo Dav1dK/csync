@@ -135,9 +135,9 @@ C_PATHINFO * c_split_path(const char* pathSrc);
  * Canonicalize a given path, which means to replace all //, /./ and /../ parts
  * of the path.
  *
- * @param path The path to canonicalize. It needs to be absolute.
+ * @param path The path to canonicalize. It needs to be absolute, otherwise the behavior is unspecified.
  *
- * @return The canonicalized path
+ * @return The canonicalized path, or NULL if an error occours. errno is set on error.
  */
 char *c_canonicalize_path(const char* path);
 

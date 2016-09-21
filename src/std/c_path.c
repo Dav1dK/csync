@@ -545,7 +545,6 @@ char *c_canonicalize_path(const char* path) {
     }
 
     len = strlen(canonical);
-    last_folder;
     curr = canonical;
 
     if (canonical[0] == '\0') {
