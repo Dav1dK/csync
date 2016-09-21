@@ -18,12 +18,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "config.h"
+
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <stdio.h>
+#include <string.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #include "c_private.h"
 #include "c_lib.h"
@@ -276,6 +283,8 @@ int csync_vio_local_rmdir(const char *uri) {
 int csync_vio_local_stat(const char *uri, csync_vio_file_stat_t *buf) {
   csync_stat_t sb;
   mbchar_t *wuri = c_utf8_to_locale( uri );
+  char link_target[PATH_MAX + 1];
+  ssize_t size;
 
   if( _tstat(wuri, &sb) < 0) {
     c_free_locale_string(wuri);
@@ -303,9 +312,18 @@ int csync_vio_local_stat(const char *uri, csync_vio_file_stat_t *buf) {
     case S_IFIFO:
       buf->type = CSYNC_VIO_FILE_TYPE_FIFO;
       break;
+#ifdef HAVE_READLINK
     case S_IFLNK:
       buf->type = CSYNC_VIO_FILE_TYPE_SYMBOLIC_LINK;
+      size = _treadlink(uri, link_target, PATH_MAX);
+      if (size == -1 || size > PATH_MAX)
+        break;
+      link_target[size] = '\0';
+      buf->u.symlink_name = c_utf8_from_locale(link_target);
+      if (buf->u.symlink_name)
+        buf->fields |= CSYNC_VIO_FILE_STAT_FIELDS_SYMLINK_NAME;
       break;
+#endif
     case S_IFREG:
       buf->type = CSYNC_VIO_FILE_TYPE_REGULAR;
       break;
@@ -322,7 +340,6 @@ int csync_vio_local_stat(const char *uri, csync_vio_file_stat_t *buf) {
   buf->fields |= CSYNC_VIO_FILE_STAT_FIELDS_PERMISSIONS;
 
   if (buf->type == CSYNC_VIO_FILE_TYPE_SYMBOLIC_LINK) {
-    /* FIXME: handle symlink */
     buf->flags = CSYNC_VIO_FILE_FLAGS_SYMLINK;
   } else {
     buf->flags = CSYNC_VIO_FILE_FLAGS_NONE;

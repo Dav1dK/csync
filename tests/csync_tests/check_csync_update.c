@@ -1,6 +1,12 @@
 #include "torture.h"
 
 #include "csync_update.c"
+#include "csync.h"
+
+#include <stdbool.h>
+
+/* The file flag for the walker function */
+static int file_flag;
 
 static void setup(void **state)
 {
@@ -35,6 +41,75 @@ static void setup_ftw(void **state)
     rc = system("mkdir -p /tmp/check_csync2");
     assert_int_equal(rc, 0);
     rc = csync_create(&csync, "/tmp", "/tmp");
+    assert_int_equal(rc, 0);
+    rc = csync_set_config_dir(csync, "/tmp/check_csync");
+    assert_int_equal(rc, 0);
+    rc = csync_init(csync);
+    assert_int_equal(rc, 0);
+
+    *state = csync;
+}
+
+static void setup_ftw_symlink_ok(void **state)
+{
+    CSYNC *csync;
+    int rc;
+
+    file_flag = -1;
+
+    rc = system("mkdir -p /tmp/check_csync1");
+    assert_int_equal(rc, 0);
+    rc = system("mkdir -p /tmp/check_csync2");
+    assert_int_equal(rc, 0);
+    rc = system("ln -s file /tmp/check_csync1/link");
+    assert_int_equal(rc, 0);
+    rc = csync_create(&csync, "/tmp/check_csync1", "/tmp/check_csync2");
+    assert_int_equal(rc, 0);
+    rc = csync_set_config_dir(csync, "/tmp/check_csync");
+    assert_int_equal(rc, 0);
+    rc = csync_init(csync);
+    assert_int_equal(rc, 0);
+
+    *state = csync;
+}
+
+static void setup_ftw_symlink_abs(void **state)
+{
+    CSYNC *csync;
+    int rc;
+
+    file_flag = -1;
+
+    rc = system("mkdir -p /tmp/check_csync1");
+    assert_int_equal(rc, 0);
+    rc = system("mkdir -p /tmp/check_csync2");
+    assert_int_equal(rc, 0);
+    rc = system("ln -s /tmp/check_csync1/file /tmp/check_csync1/abs_link");
+    assert_int_equal(rc, 0);
+    rc = csync_create(&csync, "/tmp/check_csync1", "/tmp/check_csync2");
+    assert_int_equal(rc, 0);
+    rc = csync_set_config_dir(csync, "/tmp/check_csync");
+    assert_int_equal(rc, 0);
+    rc = csync_init(csync);
+    assert_int_equal(rc, 0);
+
+    *state = csync;
+}
+
+static void setup_ftw_symlink_outside(void **state)
+{
+    CSYNC *csync;
+    int rc;
+
+    file_flag = -1;
+
+    rc = system("mkdir -p /tmp/check_csync1");
+    assert_int_equal(rc, 0);
+    rc = system("mkdir -p /tmp/check_csync2");
+    assert_int_equal(rc, 0);
+    rc = system("ln -s ../check_outside /tmp/check_csync1/outside_link");
+    assert_int_equal(rc, 0);
+    rc = csync_create(&csync, "/tmp/check_csync1", "/tmp/check_csync2");
     assert_int_equal(rc, 0);
     rc = csync_set_config_dir(csync, "/tmp/check_csync");
     assert_int_equal(rc, 0);
@@ -155,6 +230,19 @@ static int failing_fn(CSYNC *ctx,
   (void) flag;
 
   return -1;
+}
+
+static int check_gets_called(CSYNC *ctx,
+                             const char *file,
+                             const csync_vio_file_stat_t *fs,
+                             enum csync_ftw_flags_e flag)
+{
+    (void) ctx;
+    (void) file;
+    (void) fs;
+
+    file_flag = flag;
+    return 0;
 }
 
 /* detect a new file */
@@ -396,6 +484,36 @@ static void check_csync_ftw_failing_fn(void **state)
     assert_int_equal(rc, -1);
 }
 
+static void check_csync_ftw_link_ok(void **state)
+{
+    CSYNC *csync = *state;
+    int rc;
+
+    rc = csync_ftw(csync, "/tmp/check_csync1", check_gets_called, 0);
+    assert_int_equal(rc, 0);
+    assert_int_equal(file_flag, CSYNC_FTW_FLAG_SLINK);
+}
+
+static void check_csync_ftw_link_abs(void **state)
+{
+    CSYNC *csync = *state;
+    int rc;
+
+    rc = csync_ftw(csync, "/tmp/check_csync1", check_gets_called, 0);
+    assert_int_equal(rc, 0);
+    assert_int_equal(file_flag, CSYNC_FTW_FLAG_SLN);
+}
+
+static void check_csync_ftw_link_outside(void **state)
+{
+    CSYNC *csync = *state;
+    int rc;
+
+    rc = csync_ftw(csync, "/tmp/check_csync1", check_gets_called, 0);
+    assert_int_equal(rc, 0);
+    assert_int_equal(file_flag, CSYNC_FTW_FLAG_SLN);
+}
+
 int torture_run_tests(void)
 {
     const UnitTest tests[] = {
@@ -410,6 +528,10 @@ int torture_run_tests(void)
         unit_test_setup_teardown(check_csync_ftw, setup_ftw, teardown_rm),
         unit_test_setup_teardown(check_csync_ftw_empty_uri, setup_ftw, teardown_rm),
         unit_test_setup_teardown(check_csync_ftw_failing_fn, setup_ftw, teardown_rm),
+
+        unit_test_setup_teardown(check_csync_ftw_link_ok, setup_ftw_symlink_ok, teardown_rm),
+        unit_test_setup_teardown(check_csync_ftw_link_abs, setup_ftw_symlink_abs, teardown_rm),
+        unit_test_setup_teardown(check_csync_ftw_link_outside, setup_ftw_symlink_outside, teardown_rm)
     };
 
     return run_tests(tests);

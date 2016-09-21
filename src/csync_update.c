@@ -28,9 +28,11 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 
 #include "c_lib.h"
 #include "c_jhash.h"
+#include "c_path.h"
 
 #include "csync_private.h"
 #include "csync_exclude.h"
@@ -183,14 +185,10 @@ int csync_walker(CSYNC *ctx, const char *file, const csync_vio_file_stat_t *fs,
       return _csync_detect_update(ctx, file, fs, CSYNC_FTW_TYPE_FILE);
       break;
     case CSYNC_FTW_FLAG_SLINK:
-      /* FIXME: implement support for symlinks, see csync_propagate.c too */
-#if 0
       if (ctx->options.sync_symbolic_links) {
         CSYNC_LOG(CSYNC_LOG_PRIORITY_TRACE, "symlink: %s", file);
-
         return _csync_detect_update(ctx, file, fs, CSYNC_FTW_TYPE_SLINK);
       }
-#endif
       break;
     case CSYNC_FTW_FLAG_DIR: /* enter directory */
       CSYNC_LOG(CSYNC_LOG_PRIORITY_TRACE, "directory: %s", file);
@@ -208,6 +206,67 @@ int csync_walker(CSYNC *ctx, const char *file, const csync_vio_file_stat_t *fs,
   return 0;
 }
 
+/**
+ * @brief Check whether a path is inside of the root path we are syncronising
+ *
+ * @param uri The uri to check. It needs to be an absolute path.
+ *
+ * @return -1 on error, 0 if uri isn't in the root path and 1 if it is in the root path
+ */
+static int _is_in_root(CSYNC *ctx, char *uri) {
+  char *abs_root;
+  int ret;
+
+  if (!ctx || !uri) {
+    errno = EINVAL;
+    return -1;
+  }
+  abs_root = NULL;
+
+  switch (ctx->current) {
+    case LOCAL_REPLICA:
+      if (! csync_vio_is_absolute(ctx, uri)) {
+        /* make it absolute */
+        char tmp[PATH_MAX + 1];
+#ifdef _WIN32
+#error Getting an absolute path is not yet implemented on windows.
+#endif
+        if (getcwd(tmp, PATH_MAX + 1) == NULL)
+          return -1;
+        if (snprintf(tmp, PATH_MAX + 1, "%s/%s", tmp, ctx->local.uri) == -1)
+          return -1;
+        abs_root = c_canonicalize_path(tmp);
+      } else {
+        abs_root = c_canonicalize_path(ctx->local.uri);
+      }
+      break;
+    case REMOTE_REPLICA:
+      /* Remote uri's are always absolute */
+      abs_root = c_canonicalize_path(ctx->remote.uri);
+      break;
+    default:
+      return -1;
+  }
+  if (! abs_root)
+    return -1;
+
+  uri = c_canonicalize_path(uri);
+  if (! uri) {
+    SAFE_FREE(abs_root);
+    return -1;
+  }
+
+  uri[strlen(abs_root)] = '\0';
+  if (strcmp(abs_root, uri) != 0)
+    ret = 0;
+  else
+    ret = 1;
+
+  SAFE_FREE(abs_root);
+  SAFE_FREE(uri);
+  return ret;
+}
+
 /* File tree walker */
 int csync_ftw(CSYNC *ctx, const char *uri, csync_walker_fn fn,
     unsigned int depth) {
@@ -218,6 +277,7 @@ int csync_ftw(CSYNC *ctx, const char *uri, csync_walker_fn fn,
   csync_vio_file_stat_t *dirent = NULL;
   csync_vio_file_stat_t *fs = NULL;
   int rc = 0;
+  char *link_target;
 
   if (uri[0] == '\0') {
     errno = ENOENT;
@@ -302,7 +362,36 @@ int csync_ftw(CSYNC *ctx, const char *uri, csync_walker_fn fn,
     if (csync_vio_stat(ctx, filename, fs) == 0) {
       switch (fs->type) {
         case CSYNC_VIO_FILE_TYPE_SYMBOLIC_LINK:
-          flag = CSYNC_FTW_FLAG_SLINK;
+          if (! (fs->fields & CSYNC_VIO_FILE_STAT_FIELDS_SYMLINK_NAME)) {
+            flag = CSYNC_FTW_FLAG_NSTAT;
+            break;
+          }
+
+          /* We don't sync absolute symlinks */
+          if (csync_vio_is_absolute(ctx, fs->u.symlink_name)) {
+            flag = CSYNC_FTW_FLAG_SLN;
+            break;
+          }
+
+          if (asprintf(&link_target, "%s/%s", uri, fs->u.symlink_name) == -1) {
+            ctx->status_code = CSYNC_STATUS_ERROR;
+            csync_vio_file_stat_destroy(fs);
+            goto error;
+          }
+          rc = _is_in_root(ctx, link_target);
+          free(link_target);
+          if (rc == 1)
+            /* The link points inside our syncronisation filesystem tree */
+            flag = CSYNC_FTW_FLAG_SLINK;
+          else if (rc == 0)
+            /* We don't sync links which point to outside of the directory tree we
+               are syncing */
+            flag = CSYNC_FTW_FLAG_SLN;
+          else {
+            ctx->status_code = CSYNC_STATUS_ERROR;
+            csync_vio_file_stat_destroy(fs);
+            goto error;
+          }
           break;
         case CSYNC_VIO_FILE_TYPE_DIRECTORY:
           flag = CSYNC_FTW_FLAG_DIR;

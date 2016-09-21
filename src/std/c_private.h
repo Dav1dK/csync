@@ -75,6 +75,7 @@ typedef struct stat csync_stat_t;
 #endif
 
 #ifndef HAVE_LSTAT
+/* Symlinks will not work on windows, as windows doesn't have lstat */
 #define lstat _stat
 #endif
 #ifdef _WIN32
@@ -116,13 +117,17 @@ typedef char           mbchar_t;
 #define _ttelldir      telldir
 #define _tseekdir      seekdir
 #define _tcreat        creat
-#define _tstat         stat
+#define _tstat         lstat
 #define _tunlink       unlink
 #define _tmkdir(X,Y)   mkdir(X,Y)
 #define _trmdir	       rmdir
 #define _tchmod        chmod
 #define _trewinddir    rewinddir
 #define _tchown(X,Y,Z) chown(X,Y,Z)
+#endif
+
+#ifdef HAVE_READLINK
+#define _treadlink     readlink
 #endif
 
 #ifdef WITH_ICONV
