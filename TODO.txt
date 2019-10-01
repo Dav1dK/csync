@@ -1,0 +1,1 @@
+Rename folders on remote if renamed on local! (Nicht umkopieren!)

@@ -1,0 +1,12 @@
+* Add support to synchronize symbolic links
+  - This needs a lot of work cause we have to check the symlink
+    + Determine if a symlink points outside the current directory tree. They
+      are unsafe to sync.
+    + Null symlinks and absolute symlinks are always unsafe.
+  - Check which is the best way to sync symlinks
+  - Add check to modules to check whether they support symlinks
+
+d5aced82cad5d80dd7c8a1880707e42b1ef2a79e
+
+- Add a supports symlink capability to the vio modules. If it's true,
+  the module needs to implement is_absolute() and symlink().
